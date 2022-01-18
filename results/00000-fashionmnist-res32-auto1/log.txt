@@ -1,0 +1,6 @@
+Loading training set...
+Image shape: [1, 32, 32]
+Label shape: [10]
+
+Constructing networks...
+Setting up TensorFlow plugin "fused_bias_act.cu": Failed!

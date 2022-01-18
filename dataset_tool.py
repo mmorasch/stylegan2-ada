@@ -458,6 +458,30 @@ def create_mnist(tfrecord_dir, mnist_dir):
 
 #----------------------------------------------------------------------------
 
+def create_fashionmnist(tfrecord_dir, mnist_dir):
+    print('Loading fashionMNIST from "%s"' % mnist_dir)
+    import gzip
+    with gzip.open(os.path.join(mnist_dir, 'train-images-idx3-ubyte.gz'), 'rb') as file:
+        images = np.frombuffer(file.read(), np.uint8, offset=16)
+    with gzip.open(os.path.join(mnist_dir, 'train-labels-idx1-ubyte.gz'), 'rb') as file:
+        labels = np.frombuffer(file.read(), np.uint8, offset=8)
+    images = images.reshape(-1, 1, 28, 28)
+    images = np.pad(images, [(0,0), (0,0), (2,2), (2,2)], 'constant', constant_values=0)
+    assert images.shape == (60000, 1, 32, 32) and images.dtype == np.uint8
+    assert labels.shape == (60000,) and labels.dtype == np.uint8
+    assert np.min(images) == 0 and np.max(images) == 255
+    assert np.min(labels) == 0 and np.max(labels) == 9
+    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
+    onehot[np.arange(labels.size), labels] = 1.0
+
+    with TFRecordExporter(tfrecord_dir, images.shape[0]) as tfr:
+        order = tfr.choose_shuffled_order()
+        for idx in range(order.size):
+            tfr.add_image(images[order[idx]])
+        tfr.add_labels(onehot[order])
+
+#----------------------------------------------------------------------------
+
 def create_mnistrgb(tfrecord_dir, mnist_dir, num_images=1000000, random_seed=123):
     print('Loading MNIST from "%s"' % mnist_dir)
     import gzip
@@ -894,6 +918,11 @@ def execute_cmdline(argv):
                                             'create_mnist datasets/mnist ~/downloads/mnist')
     p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
     p.add_argument(     'mnist_dir',        help='Directory containing MNIST')
+
+    p = add_command(    'create_fashionmnist',     'Create dataset for MNIST.',
+                                            'create_fashionmnist datasets/mnist ~/downloads/mnist')
+    p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
+    p.add_argument(     'mnist_dir',        help='Directory containing fashionMNIST')
 
     p = add_command(    'create_mnistrgb',  'Create dataset for MNIST-RGB.',
                                             'create_mnistrgb datasets/mnistrgb ~/downloads/mnist')
